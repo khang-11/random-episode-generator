@@ -7,7 +7,7 @@ A full-stack app for generating random TV show episodes. Add your favorite shows
 - **TMDB Integration** — Search for TV shows with poster art, episode images, and metadata
 - **Manual Show Entry** — Add shows manually if they're not on TMDB
 - **Smart Random Picker** — Picks from unwatched episodes only; auto-resets when all are watched
-- **Episode Blacklist** — Per-user blacklist for episodes you never want to see
+- **Episode Blacklist** — Per-user blacklist for episodes you never want to see (persists across watch resets)
 - **User Profiles** — Simple name-based profiles, no authentication required
 - **Splash Art** — Episode reveal with still images from TMDB
 
@@ -16,80 +16,129 @@ A full-stack app for generating random TV show episodes. Add your favorite shows
 - **Backend:** Go (Chi router, pgx)
 - **Frontend:** React 18 + TypeScript + Vite
 - **UI:** shadcn/ui + Tailwind CSS v4
-- **Database:** PostgreSQL (Neon free tier)
+- **Database:** PostgreSQL
 - **API:** TMDB (The Movie Database)
 
-## Quick Start
+---
 
-### Prerequisites
+## Running Locally
 
-- Go 1.21+
-- Node.js 18+
-- PostgreSQL database (or [Neon](https://neon.tech) free tier)
-- [TMDB API key](https://www.themoviedb.org/settings/api) (free)
+### Option 1: Docker Compose (recommended)
 
-### Backend
+The easiest way — runs frontend, backend, and Postgres all in containers.
+
+**Prerequisites:** Docker and Docker Compose
 
 ```bash
-cd backend
+# 1. Create .env at the project root with your TMDB API key
 cp .env.example .env
-# Edit .env with your DATABASE_URL and TMDB_API_KEY
+# Edit .env → set TMDB_API_KEY=your_key_here
+
+# 2. Build and start everything
+docker compose up --build
+```
+
+Open **http://localhost:3000**. That's it.
+
+To stop: `docker compose down`
+To wipe the database: `docker compose down -v`
+
+### Option 2: Manual (dev mode)
+
+**Prerequisites:** Go 1.24+, Node.js 18+, a PostgreSQL database
+
+**Backend:**
+```bash
+cd backend
+# Create .env with DATABASE_URL and TMDB_API_KEY
+cat > .env <<EOF
+DATABASE_URL=postgres://user:pass@localhost:5432/random_episode?sslmode=disable
+TMDB_API_KEY=your_key_here
+PORT=8080
+EOF
 go run ./cmd/server/
 ```
 
-### Frontend
-
+**Frontend** (separate terminal):
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-The frontend dev server runs on `http://localhost:5173` and proxies API requests to `http://localhost:8080`.
+Open **http://localhost:5173**. The Vite dev server proxies `/api/` to the backend at `:8080`.
 
-## Environment Variables
+---
 
-### Backend (`backend/.env`)
+## Deploying for Free
 
-| Variable       | Description                        |
-| -------------- | ---------------------------------- |
-| `DATABASE_URL` | PostgreSQL connection string       |
-| `TMDB_API_KEY` | TMDB API key (v3)                  |
-| `PORT`         | Server port (default: 8080)        |
-
-## Deployment
-
-### Database — Neon (Free)
+### 1. Database — Neon (free PostgreSQL)
 
 1. Sign up at [neon.tech](https://neon.tech)
-2. Create a project and copy the connection string
-3. Set as `DATABASE_URL`
+2. Create a project → copy the connection string
+3. This is your `DATABASE_URL`
 
-### Backend — Fly.io or Render
+### 2. Backend — Fly.io (free tier, 3 shared VMs)
 
-**Fly.io:**
 ```bash
+# Install flyctl: https://fly.io/docs/flyctl/install/
 cd backend
-fly launch
-fly secrets set DATABASE_URL="..." TMDB_API_KEY="..."
+
+# First time: create the app
+fly launch --no-deploy
+
+# Set secrets
+fly secrets set \
+  DATABASE_URL="postgres://user:pass@your-neon-host/dbname?sslmode=require" \
+  TMDB_API_KEY="your_tmdb_key" \
+  CORS_ORIGINS="https://your-app.vercel.app"
+
+# Deploy
 fly deploy
 ```
 
-**Render:**
-1. Create a new Web Service
-2. Set build command: `go build -o server ./cmd/server/`
-3. Set start command: `./server`
-4. Add environment variables
+Your backend URL will be something like `https://random-episode.fly.dev`.
 
-### Frontend — Vercel or Netlify
+### 3. Frontend — Vercel (free tier)
 
-**Vercel:**
 ```bash
 cd frontend
-npx vercel
+
+# Install Vercel CLI if needed
+npm i -g vercel
+
+# Deploy (follow prompts: Framework=Vite, Build=npm run build, Output=dist)
+vercel
+
+# Set the backend URL as an env var
+vercel env add VITE_API_URL  # enter: https://random-episode.fly.dev
+
+# Redeploy with the env var
+vercel --prod
 ```
 
-Set the `VITE_API_URL` environment variable to your backend URL, and update the Vite config proxy or use the full URL in production.
+Your frontend URL will be something like `https://your-app.vercel.app`.
+
+### 4. Update CORS
+
+After you have both URLs, update the backend's CORS setting:
+
+```bash
+cd backend
+fly secrets set CORS_ORIGINS="https://your-app.vercel.app"
+```
+
+---
+
+## Environment Variables
+
+| Variable       | Where           | Description                                          |
+| -------------- | --------------- | ---------------------------------------------------- |
+| `DATABASE_URL` | Backend         | PostgreSQL connection string                         |
+| `TMDB_API_KEY` | Backend / root  | TMDB API key (v3) — free at themoviedb.org           |
+| `PORT`         | Backend         | Server port (default: 8080)                          |
+| `CORS_ORIGINS` | Backend         | Comma-separated allowed origins for CORS             |
+| `VITE_API_URL` | Frontend        | Backend URL for production (empty in dev, Vite proxies) |
 
 ## API Endpoints
 
@@ -115,6 +164,6 @@ Set the `VITE_API_URL` environment variable to your backend URL, and update the 
 1. Get all episodes for the show
 2. Exclude blacklisted episodes (per user)
 3. Exclude already-watched episodes (per user)
-4. If all non-blacklisted episodes are watched → reset the cycle (clear watched list)
+4. If all non-blacklisted episodes are watched → reset the cycle (clear watched list, blacklist stays)
 5. Pick a random episode from the remaining pool
 6. Mark it as watched and return it
