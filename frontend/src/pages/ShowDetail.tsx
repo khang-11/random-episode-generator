@@ -97,6 +97,30 @@ export default function ShowDetail() {
     }
   };
 
+  const handleSkip = async () => {
+    if (!userId || !randomResult) return;
+    // Unmark the current episode as watched, then pick another
+    toggleWatched.mutate({
+      userId,
+      episodeId: randomResult.episode.id,
+      showId: showId!,
+      watched: true,
+    });
+    await handleRandom();
+  };
+
+  const handleBlacklistAndNext = async () => {
+    if (!userId || !randomResult) return;
+    // Blacklist the current episode, then pick another
+    toggleBlacklist.mutate({
+      userId,
+      episodeId: randomResult.episode.id,
+      showId: showId!,
+      blacklisted: false,
+    });
+    await handleRandom();
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -282,6 +306,8 @@ export default function ShowDetail() {
             <RandomReveal
               result={randomResult}
               onAnother={handleRandom}
+              onSkip={handleSkip}
+              onBlacklist={handleBlacklistAndNext}
               onClose={() => setRevealOpen(false)}
             />
           )}
@@ -360,10 +386,14 @@ function EpisodeRow({
 function RandomReveal({
   result,
   onAnother,
+  onSkip,
+  onBlacklist,
   onClose,
 }: {
   result: RandomResult;
   onAnother: () => void;
+  onSkip: () => void;
+  onBlacklist: () => void;
   onClose: () => void;
 }) {
   const ep = result.episode;
@@ -440,7 +470,15 @@ function RandomReveal({
             <Dices className="h-4 w-4" />
             Pick Another
           </Button>
-          <Button variant="outline" onClick={onClose} className="flex-1">
+          <Button variant="secondary" onClick={onSkip} className="flex-1 gap-2">
+            <EyeOff className="h-4 w-4" />
+            Skip
+          </Button>
+          <Button variant="destructive" onClick={onBlacklist} className="gap-2">
+            <Ban className="h-4 w-4" />
+            Block
+          </Button>
+          <Button variant="outline" onClick={onClose}>
             Done
           </Button>
         </div>
