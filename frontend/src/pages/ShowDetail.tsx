@@ -465,10 +465,18 @@ function RandomReveal({
             className="w-32"
           />
         </div>
+        <Button size="lg" onClick={onAnother} className="w-full gap-2">
+          <Dices className="h-5 w-5" />
+          Pick Another
+        </Button>
         <div className="flex gap-2">
-          <Button onClick={onAnother} className="flex-1 gap-2">
-            <Dices className="h-4 w-4" />
-            Pick Another
+          <Button variant="secondary" size="sm" onClick={onSkip} className="flex-1 gap-1">
+            <EyeOff className="h-3.5 w-3.5" />
+            Skip
+          </Button>
+          <Button variant="destructive" size="sm" onClick={onBlacklist} className="flex-1 gap-1">
+            <Ban className="h-3.5 w-3.5" />
+            Block
           </Button>
           <Button variant="secondary" onClick={onSkip} className="flex-1 gap-2">
             <EyeOff className="h-4 w-4" />
@@ -478,7 +486,7 @@ function RandomReveal({
             <Ban className="h-4 w-4" />
             Block
           </Button>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" size="sm" onClick={onClose} className="flex-1">
             Done
           </Button>
         </div>
