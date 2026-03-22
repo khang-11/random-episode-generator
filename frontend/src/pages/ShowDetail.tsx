@@ -67,10 +67,9 @@ export default function ShowDetail() {
 
   const stats = useMemo(() => {
     if (!episodes) return { watched: 0, total: 0, blacklisted: 0 };
-    const nonBlacklisted = episodes.filter((e) => !e.blacklisted);
     return {
-      watched: nonBlacklisted.filter((e) => e.watched).length,
-      total: nonBlacklisted.length,
+      watched: episodes.filter((e) => e.watched && !e.blacklisted).length,
+      total: episodes.length,
       blacklisted: episodes.filter((e) => e.blacklisted).length,
     };
   }, [episodes]);
@@ -135,25 +134,43 @@ export default function ShowDetail() {
       <main className="relative z-0 container mx-auto px-4 py-8 space-y-6">
         {/* Random button - always visible at top */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card border rounded-xl p-4 shadow-sm">
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-sm">
-              <span>
-                {stats.watched} / {stats.total} episodes watched
+          <div className="space-y-1 w-full sm:w-auto">
+            <div className="flex items-center gap-3 text-sm">
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-2.5 h-2.5 rounded-full bg-green-500" />
+                {stats.watched} watched
               </span>
               {stats.blacklisted > 0 && (
-                <span className="text-muted-foreground ml-4">
-                  {stats.blacklisted} blacklisted
+                <span className="flex items-center gap-1 text-muted-foreground">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" />
+                  {stats.blacklisted} blocked
                 </span>
               )}
+              <span className="text-muted-foreground">
+                / {stats.total} total
+              </span>
             </div>
-            <Progress
-              value={
-                stats.total > 0
-                  ? (stats.watched / stats.total) * 100
-                  : 0
-              }
-              className="w-64"
-            />
+            <div className="relative h-2 w-64 overflow-hidden rounded-full bg-muted">
+              <div
+                className="absolute inset-y-0 left-0 bg-green-500 transition-all duration-500 rounded-l-full"
+                style={{
+                  width: stats.total > 0
+                    ? `${(stats.watched / stats.total) * 100}%`
+                    : "0%",
+                }}
+              />
+              <div
+                className="absolute inset-y-0 bg-red-500 transition-all duration-500 rounded-r-full"
+                style={{
+                  left: stats.total > 0
+                    ? `${((stats.total - stats.blacklisted) / stats.total) * 100}%`
+                    : "0%",
+                  width: stats.total > 0
+                    ? `${(stats.blacklisted / stats.total) * 100}%`
+                    : "0%",
+                }}
+              />
+            </div>
           </div>
           <Button
             size="lg"
